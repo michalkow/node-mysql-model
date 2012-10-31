@@ -1,6 +1,6 @@
 node-mysql-model
 ========
-A backbone based model for communicating with a MySQL database using [felixge/node-mysql](https://github.com/felixge/node-mysql).
+A [backbone](http://backbonejs.org) based model for communicating with a MySQL database using [felixge/node-mysql](https://github.com/felixge/node-mysql).
 
 Install
 --------
@@ -58,20 +58,25 @@ var Movie = MyAppModel.extend({
 > find
 
 
-Retrieves records from database
+*Retrieves records from database*
+
+Usage:
 
 ```javascript
-yourModel.find();
-yourModel.find(method);
-yourModel.find(callback);
-yourModel.find(method, conditions);
-yourModel.find(method, callback);
-yourModel.find(method, conditions, callback);
+movie.find();
+movie.find(method);
+movie.find(callback);
+movie.find(method, conditions);
+movie.find(method, callback);
+movie.find(method, conditions, callback);
 ```		
+Parameters:
 
 - *string* **method**: uses one of find methods
 - *object* **conditions**: set find conditions
 - *function* **callback**: returns errors and results
+
+Example:
 
 ```javascript
 movie.find('all', {where: "year > 2001"}, function(err, rows, fields) {
@@ -81,17 +86,22 @@ movie.find('all', {where: "year > 2001"}, function(err, rows, fields) {
 
 > save
 
-Saves your model to database
+*Saves your model to database*
+
+Usage:
 
 ```javascript
-yourModel.save();
-yourModel.save(where);
-yourModel.save(callback);
-yourModel.save(where, callback);
+movie.save();
+movie.save(where);
+movie.save(callback);
+movie.save(where, callback);
 ```	
+Parameters:
 
 - *string* **where**: set condition for WHERE
 - *function* **callback**: returns errors and results
+
+Example:
 
 ```javascript
 movie = new Movie({
@@ -109,17 +119,22 @@ movie.save();
 
 > remove
 
-Deletes your model from database and unsets it
+*Deletes your model from database and unsets it*
+
+Usage:
 
 ```javascript
-yourModel.remove();
-yourModel.remove(where);
-yourModel.remove(callback);
-yourModel.remove(where, callback);
+movie.remove();
+movie.remove(where);
+movie.remove(callback);
+movie.remove(where, callback);
 ```	
+Parameters:
 
 - *string* **where**: set condition for WHERE
 - *function* **callback**: returns errors and results
+
+Example:
 
 ```javascript
 // Will delete record from database matching id model
@@ -131,17 +146,23 @@ movie.remove('year < 1980');
 
 > read
 
-Retrieves record from database and set it to current model
+*Retrieves record from database and set it to current model*
+
+Usage:
 
 ```javascript
-yourModel.read();
-yourModel.read(id);
-yourModel.read(callback);
-yourModel.read(id, callback);
+movie.read();
+movie.read(id);
+movie.read(callback);
+movie.read(id, callback);
 ```	
+
+Parameters:
 
 - *integer* **id**: Id of record to read
 - *function* **callback**: returns errors and results
+
+Example:
 
 ```javascript
 movie.set('id', 6);
@@ -152,15 +173,20 @@ movie.read(6);
 
 > query
 
-Retrieves record from database and set it to current model
+*Retrieves record from database and set it to current model*
+
+Usage:
 
 ```javascript
-yourModel.query(query);
-yourModel.query(query, callback);
+movie.query(query);
+movie.query(query, callback);
 ```	
+Parameters:
 
 - *string* **query**: Your custom sql query to run 
 - *function* **callback**: returns errors and results
+
+Example:
 
 ```javascript
 movie.query("SELECT name FROM movies WHERE director = 'James Cameron' ORDER BY year", function(err, rows, fields) {
@@ -170,13 +196,18 @@ movie.query("SELECT name FROM movies WHERE director = 'James Cameron' ORDER BY y
 
 > setSQL
 
-Method to replace 'set', when setting results passed back by node-mysql
+*Method to replace 'set', when setting results passed back by node-mysql*
+
+Usage:
 
 ```javascript
-yourModel.setSQL(result);
+movie.setSQL(result);
 ```	
+Parameters:
 
 - *object* **result**: Results passed back by find or read
+
+Example:
 
 ```javascript
 movie.find('first', {where: "id=12"}, function(err, row) {
@@ -188,11 +219,13 @@ movie.find('first', {where: "id=12"}, function(err, row) {
 
 > 'all'
 
-Returns all the records matching conditions
+*Returns all the records matching conditions*
 
 Returns:
 
 - array
+
+Example:
 
 ```javascript
 movie.find('all', {where: "language = 'German'", limit: [0, 30]}, function(err, rows) {
@@ -204,11 +237,13 @@ movie.find('all', {where: "language = 'German'", limit: [0, 30]}, function(err, 
 
 > 'count'
 
-Returns number of records matching conditions
+*Returns number of records matching conditions*
 
 Returns:
 
 - integer
+
+Example:
 
 ```javascript
 movie.find('count', {where: "year = 2012"}, function(err, result) {
@@ -218,11 +253,13 @@ movie.find('count', {where: "year = 2012"}, function(err, result) {
 
 > 'first'
 
-Returns first the records matching conditions
+*Returns first the records matching conditions*
 
 Returns:
 
-- object
+- object (hash)
+
+Example:
 
 ```javascript
 movie.find('first', {where: "id = 3"}, function(err, row) {
@@ -232,11 +269,13 @@ movie.find('first', {where: "id = 3"}, function(err, row) {
  
 > 'field'
 
-Returns field of the first record matching conditions
+*Returns field of the first record matching conditions*
 
 Returns:
 
 - depends on field type
+
+Example:
 
 ```javascript
 movie.find('field', {fields: ['name'], where: "id = 3"}, function(err, field) {
@@ -248,35 +287,129 @@ movie.find('field', {fields: ['name'], where: "id = 3"}, function(err, field) {
 
 > fields
 
-Fields to select from the table
+*Fields to select from the table*
+
+Accepts:
+
+- array
+- string
+
+Example:
+
+```javascript
+movie.find('all', {fields: ['id', 'name', 'year']});
+// SELECT id, name, year FROM movies
+movie.find('all', {fields: "name"});
+// SELECT name FROM movies
+```	
 
 > where
 
-Condition for WHERE
+*Operators for MySQL WHERE clause.*
+
+Accepts:
+
+- string
+
+Example:
+
+```javascript
+movie.find('all', {where: "year > 1987"});
+// SELECT * FROM movies WHERE year > 1987
+```	
 
 > group
 
-Condition for GROUP BY
+*Operators for MySQL GROUP BY clause.*
+
+Accepts:
+
+- array
+- string
+
+Example:
+
+```javascript
+movie.find('all', {group: ['year', 'name']});
+// SELECT * FROM movies GROUP BY year, name
+movie.find('all', {group: "name"});
+// SELECT * FROM movies GROUP BY name
+```	
 
 > groupDESC
 
-If true, sets DESC order for GROUP BY
+*If true, sets descending order for GROUP BY*
+
+Accepts:
+
+- boolean
+
+Example:
+
+```javascript
+movie.find('all', {group: ['year', 'name'], groupDESC:true});
+// SELECT * FROM movies GROUP BY year, name DESC
+```	
 
 > having
 
-Condition for HAVING
+*Operators for MySQL HAVING clause.*
 
 > order
 
-Condition for ORDER BY
+*Operators for MySQL ORDER BY clause.*
+
+Accepts:
+
+- array
+- string
+
+Example:
+
+```javascript
+movie.find('all', {group: ['year', 'name']});
+// SELECT * FROM movies ORDER BY year, name
+movie.find('all', {group: "name"});
+// SELECT * FROM movies ORDER BY name
+```	
 
 > orderDESC
 
-If true, sets DESC order for ORDER BY
+*If true, sets descending order for ORDER BY*
+
+Accepts:
+
+- boolean
+
+Example:
+
+```javascript
+movie.find('all', {group: ['year', 'name'], orderDESC:true});
+// SELECT * FROM movies ORDER BY year, name DESC
+```	
 
 > limit
 
-Condition for LIMIT
+Operators for MySQL LIMIT clause.
+
+Accepts:
+
+- array
+- string
+
+Example:
+
+```javascript
+movie.find('all', {limit: [0, 30]});
+// SELECT * FROM movies LIMIT 0, 30
+movie.find('all', {limit: "10, 40"});
+// SELECT * FROM movies LIMIT 10, 40
+```	
+
+Todo
+-------
+- validation
+- relations
 				
 License
 -------
