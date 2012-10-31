@@ -173,7 +173,7 @@ movie.read(6);
 
 > query
 
-*Retrieves record from database and set it to current model*
+*Runs custom query*
 
 Usage:
 
@@ -355,6 +355,17 @@ movie.find('all', {group: ['year', 'name'], groupDESC:true});
 
 *Operators for MySQL HAVING clause.*
 
+Accepts:
+
+- string
+
+Example:
+
+```javascript
+movie.find('all', {fields: ['name', 'COUNT(name)'], group: "name", having: "COUNT(name) = 1"});
+// SELECT name, COUNT(name) FROM movies GROUP BY name HAVING COUNT(name) = 1
+```
+
 > order
 
 *Operators for MySQL ORDER BY clause.*
@@ -390,7 +401,7 @@ movie.find('all', {group: ['year', 'name'], orderDESC:true});
 
 > limit
 
-Operators for MySQL LIMIT clause.
+*Operators for MySQL LIMIT clause.*
 
 Accepts:
 
