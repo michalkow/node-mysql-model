@@ -35,6 +35,8 @@ var MyAppModel = mysqlModel.createConnection({
   password : 'database-password',
   database : 'database-name',
 });
+
+movie = new Movie();
 ```		
 	
 To see complete list of options for creating a connection with the database visit [felixge/node-mysql](https://github.com/felixge/node-mysql#connection-options) readme. 	
