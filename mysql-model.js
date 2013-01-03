@@ -16,6 +16,10 @@ var createConnection  = function (options) {
 				}
 			};
 		},
+		// Function for disconnect MySQL connection
+		disconnect: function(){
+			connection.end();
+		}
 		// Function for creating custom queries
 		query: function(query, callback) {
 			connection.query(query, function(err, result, fields) {
