@@ -16,10 +16,6 @@ var createConnection  = function (options) {
 				}
 			};
 		},
-		// Function for disconnect MySQL connection
-		disconnect: function(){
-			connection.end();
-		}
 		// Function for creating custom queries
 		query: function(query, callback) {
 			connection.query(query, function(err, result, fields) {
@@ -31,13 +27,15 @@ var createConnection  = function (options) {
 		// Function returning one set of results and setting it to model it was used on
 		read: function(id, callback) {
 			root=this;
+			if(this.tableName) var tableName = this.tableName;
+			else var tableName = this.attributes.tableName;
 			if(!id) {
 				id=this.attributes.id;
 			} else if (typeof(id) == "function") {
 				callback=id;
 				id=this.attributes.id;
 			} 
-			var q = "SELECT * FROM "+this.tableName+" WHERE id="+id;
+			var q = "SELECT * FROM "+tableName+" WHERE id="+id;
 			connection.query(q, root, function(err, result, fields) {
 				root.setSQL(result[0]);
 				if(callback){
@@ -55,6 +53,8 @@ var createConnection  = function (options) {
 				callback=conditions;
 				conditions={};
 			}
+			if(this.tableName) var tableName = this.tableName;
+			else var tableName = this.attributes.tableName;
 			// building query conditions
 			var qcond='';
 			var fields='*';
@@ -86,7 +86,8 @@ var createConnection  = function (options) {
 			switch (method) {
 				// default method
 				case 'all': 
-					var q = "SELECT "+fields+" FROM "+this.tableName+qcond;
+					var q = "SELECT "+fields+" FROM "+tableName+qcond;
+					console.log(q);
 					connection.query(q, function(err, result, fields) {
 						if(callback){
 							callback(err, result, fields);
@@ -95,7 +96,7 @@ var createConnection  = function (options) {
 					break;
 				// method returning value of COUNT(*)
 				case 'count':
-					var q = "SELECT COUNT(*) FROM "+this.tableName+qcond;
+					var q = "SELECT COUNT(*) FROM "+tableName+qcond;
 					connection.query(q, function(err, result, fields) {
 						if(callback){
 							callback(err, result[0]['COUNT(*)'], fields);
@@ -104,7 +105,7 @@ var createConnection  = function (options) {
 					break;		
 				// method returning only first result (to use when you expect only one result)				
 				case 'first':
-					var q = "SELECT "+fields+" FROM "+this.tableName+qcond;
+					var q = "SELECT "+fields+" FROM "+tableName+qcond;
 					connection.query(q, function(err, result, fields) {
 						if(callback){
 							callback(err, result[0], fields);
@@ -113,7 +114,7 @@ var createConnection  = function (options) {
 					break;
 				// method returning only value of one field (if specified in 'fields') form first result 
 				case 'field':
-					var q = "SELECT "+fields+" FROM "+this.tableName+qcond;
+					var q = "SELECT "+fields+" FROM "+tableName+qcond;
 					connection.query(q, function(err, result, fields) {
 						for (var key in result[0]) break;
 						if(callback){
@@ -129,17 +130,19 @@ var createConnection  = function (options) {
 				callback=where;
 				where=null;
 			}
+			if(this.tableName) var tableName = this.tableName;
+			else var tableName = this.attributes.tableName;
 			if(where) {
 				var id = null;
 				if(this.has('id')) {
 					id = this.get('id');
 					delete this.attributes.id;
 				}
-				var q = "UPDATE "+this.tableName+" SET "+ connection.escape(this.attributes)+" WHERE "+where;
+				var q = "UPDATE "+tableName+" SET "+ connection.escape(this.attributes)+" WHERE "+where;
 				if(id) {
 					this.set('id', id);
 				}
-				var check = "SELECT * FROM "+this.tableName+" WHERE "+where;
+				var check = "SELECT * FROM "+tableName+" WHERE "+where;
 				connection.query(check, function(err, result, fields) {
 					if(result[0]){
 						connection.query(q, function(err, result) {
@@ -157,9 +160,9 @@ var createConnection  = function (options) {
 				if(this.has('id')) {
 					var id = this.get('id');
 					delete this.attributes.id;
-					var q = "UPDATE "+this.tableName+" SET "+ connection.escape(this.attributes)+" WHERE id="+connection.escape(id);
+					var q = "UPDATE "+tableName+" SET "+ connection.escape(this.attributes)+" WHERE id="+connection.escape(id);
 					this.set('id', id);
-					var check = "SELECT * FROM "+this.tableName+" WHERE id="+connection.escape(id);
+					var check = "SELECT * FROM "+tableName+" WHERE id="+connection.escape(id);
 					connection.query(check, function(err, result, fields) {
 						if(result[0]){
 							connection.query(q, function(err, result) {
@@ -174,7 +177,7 @@ var createConnection  = function (options) {
 					});			
 				} else {
 					// Create new record
-					var q = "INSERT INTO "+this.tableName+" SET "+ connection.escape(this.attributes);
+					var q = "INSERT INTO "+tableName+" SET "+ connection.escape(this.attributes);
 					connection.query(q, function(err, result) {
 						if(callback){
 							callback(err, result);
@@ -189,9 +192,11 @@ var createConnection  = function (options) {
 				callback=where;
 				where=null;
 			}
+			if(this.tableName) var tableName = this.tableName;
+			else var tableName = this.attributes.tableName;
 			if(where) {
-				var q = "DELETE FROM "+this.tableName+" WHERE "+where;
-				var check = "SELECT * FROM "+this.tableName+" WHERE "+where;
+				var q = "DELETE FROM "+tableName+" WHERE "+where;
+				var check = "SELECT * FROM "+tableName+" WHERE "+where;
 				connection.query(check, function(err, result, fields) {
 					if(result[0]){
 						connection.query(q, function(err, result) {
@@ -206,8 +211,8 @@ var createConnection  = function (options) {
 				});					
 			} else {
 				if(this.has('id')) {
-					var q = "DELETE FROM "+this.tableName+" WHERE id="+connection.escape(this.attributes.id);
-					var check = "SELECT * FROM "+this.tableName+" WHERE id="+connection.escape(this.attributes.id);
+					var q = "DELETE FROM "+tableName+" WHERE id="+connection.escape(this.attributes.id);
+					var check = "SELECT * FROM "+tableName+" WHERE id="+connection.escape(this.attributes.id);
 					this.clear();
 					connection.query(check, function(err, result, fields) {
 						if(result[0]){

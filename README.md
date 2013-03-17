@@ -36,7 +36,15 @@ var MyAppModel = mysqlModel.createConnection({
   database : 'database-name',
 });
 
+var Movie = MyAppModel.extend({
+	tableName: "movies",
+});
+
 movie = new Movie();
+
+// OR
+
+movie = new MyAppModel({tableName: "movies"});
 ```		
 	
 To see complete list of options for creating a connection with the database visit [felixge/node-mysql](https://github.com/felixge/node-mysql#connection-options) readme. 	
@@ -231,7 +239,7 @@ Example:
 
 ```javascript
 movie.find('all', {where: "language = 'German'", limit: [0, 30]}, function(err, rows) {
-	for(var i; i<rows.length; i++) {
+	for(var i=0; i<rows.length; i++) {
 		console.log(rows[i]);
 	}
 });
