@@ -87,7 +87,6 @@ var createConnection  = function (options) {
 				// default method
 				case 'all': 
 					var q = "SELECT "+fields+" FROM "+tableName+qcond;
-					console.log(q);
 					connection.query(q, function(err, result, fields) {
 						if(callback){
 							callback(err, result, fields);
