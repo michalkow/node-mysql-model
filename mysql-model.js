@@ -146,12 +146,12 @@ var createConnection  = function (options) {
 					if(result[0]){
 						connection.query(q, function(err, result) {
 							if(callback){
-								callback(err, result);
+								callback(err, result, connection);
 							}
 						});	
 					} else {
 						err="ERROR: Record not found";
-						callback(err, result);
+						callback(err, result, connection);
 					}
 				});	
 				
@@ -166,12 +166,12 @@ var createConnection  = function (options) {
 						if(result[0]){
 							connection.query(q, function(err, result) {
 								if(callback){
-									callback(err, result);
+									callback(err, result, connection);
 								}
 							});	
 						} else {
 							err="ERROR: Record not found";
-							callback(err, result);
+							callback(err, result, connection);
 						}
 					});			
 				} else {
@@ -179,7 +179,7 @@ var createConnection  = function (options) {
 					var q = "INSERT INTO "+tableName+" SET "+ connection.escape(this.attributes);
 					connection.query(q, function(err, result) {
 						if(callback){
-							callback(err, result);
+							callback(err, result, connection);
 						}
 					});
 				}
@@ -200,12 +200,12 @@ var createConnection  = function (options) {
 					if(result[0]){
 						connection.query(q, function(err, result) {
 							if(callback){
-								callback(err, result);
+								callback(err, result, connection);
 							}
 						});	
 					} else {
 						err="ERROR: Record not found";
-						callback(err, result);
+						callback(err, result, connection);
 					}
 				});					
 			} else {
@@ -217,22 +217,26 @@ var createConnection  = function (options) {
 						if(result[0]){
 							connection.query(q, function(err, result) {
 								if(callback){
-									callback(err, result);
+									callback(err, result, connection);
 								}
 							});	
 						} else {
 							err="ERROR: Record not found";
-							callback(err, result);
+							callback(err, result, connection);
 						}
 					});			
 				} else {
 					err="ERROR: Model has no specified ID, delete aborted"; 
 					if(callback){
-						callback(err, result);
+						callback(err, result, connection);
 					}
 				}
 			}	
 		},
+		killConnection: function(cb) {
+			cb = cb || function(){};
+			connection.end(cb)
+		}
 	});
 	return SQLModel;
 }
