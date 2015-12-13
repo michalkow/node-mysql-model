@@ -1,7 +1,7 @@
 {
   "author": "Michal Kowalkowski <kowalkowski.michal@gmail.com>",
   "name": "mysql-model",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A backbone based model for communicating with a MySQL database using felixge/node-mysql.",
   "main": "./mysql-model.js",
   "scripts": {
