@@ -4,7 +4,7 @@ var mysql = require('mysql');
 
 var createConnection  = function (options) {
 	// Uses node-mysql to establish connection with database
-	var connection = mysql.createConnection(options);
+	var pool  = mysql.createPool(options);
 
 	// Main model
 	var SQLModel = Backbone.Model.extend({
@@ -16,13 +16,23 @@ var createConnection  = function (options) {
 				}
 			};
 		},
+		// Function for disconnect MySQL connection
+		disconnect: function(){
+			connection.end();
+		},
 		// Function for creating custom queries
 		query: function(query, callback) {
-			connection.query(query, function(err, result, fields) {
-				if(callback){
-					callback(err, result, fields);
-				}
-			});	
+			
+      pool.getConnection(function(err, connection) {
+        connection.query(query, function(err, results, fields) {
+          connection.release();
+          //callback(false, results);
+          if(callback) {
+					  callback(err, result, fields);
+				  }
+        });
+      });
+				
 		},		
 		// Function returning one set of results and setting it to model it was used on
 		read: function(id, callback) {
@@ -36,12 +46,19 @@ var createConnection  = function (options) {
 				id=this.attributes.id;
 			} 
 			var q = "SELECT * FROM "+tableName+" WHERE id="+id;
-			connection.query(q, root, function(err, result, fields) {
-				root.setSQL(result[0]);
-				if(callback){
-					callback(err, result[0], fields);
-				}
-			});		
+			
+			
+      pool.getConnection(function(err, connection) {
+			  connection.query(q, root, function(err, result, fields) {
+				  connection.release();
+				  root.setSQL(result[0]);
+				  if(callback) {
+				  	callback(err, result[0], fields);
+				  }
+          
+        });
+      });
+			
 		},	
 		// Function with set of methods to return records from database
 		find: function(method, conditions, callback) {
@@ -86,40 +103,60 @@ var createConnection  = function (options) {
 			switch (method) {
 				// default method
 				case 'all': 
-					var q = "SELECT "+fields+" FROM "+tableName+qcond;
-					connection.query(q, function(err, result, fields) {
-						if(callback){
-							callback(err, result, fields);
-						}
-					});	
+					var query = "SELECT "+fields+" FROM "+tableName+qcond;
+					console.log("DEBUG: mysql-model: " + query);
+					
+          pool.getConnection(function(err, connection) {
+            connection.query(query, function(err, result, fields) {
+              connection.release();
+              if(callback) {
+			    		  callback(err, result, fields);
+			    	  }
+            });
+          });
+					
 					break;
 				// method returning value of COUNT(*)
 				case 'count':
-					var q = "SELECT COUNT(*) FROM "+tableName+qcond;
-					connection.query(q, function(err, result, fields) {
-						if(callback){
-							callback(err, result[0]['COUNT(*)'], fields);
-						}
-					});				
+					var query = "SELECT COUNT(*) FROM "+tableName+qcond;
+					
+					
+          pool.getConnection(function(err, connection) {
+            connection.query(query, function(err, result, fields) {
+              connection.release();
+              if(callback) {
+			    		  callback(err, result[0]['COUNT(*)'], fields);
+			    	  }
+            });
+          });
+								
 					break;		
 				// method returning only first result (to use when you expect only one result)				
 				case 'first':
-					var q = "SELECT "+fields+" FROM "+tableName+qcond;
-					connection.query(q, function(err, result, fields) {
-						if(callback){
-							callback(err, result[0], fields);
-						}
-					});				
+					var query = "SELECT "+fields+" FROM "+tableName+qcond;
+					
+          pool.getConnection(function(err, connection) {
+            connection.query(query, function(err, result, fields) {
+              connection.release();
+              if(callback) {
+			    		  callback(err, result[0], fields);
+			    	  }
+            });
+          });			
 					break;
 				// method returning only value of one field (if specified in 'fields') form first result 
 				case 'field':
-					var q = "SELECT "+fields+" FROM "+tableName+qcond;
-					connection.query(q, function(err, result, fields) {
-						for (var key in result[0]) break;
-						if(callback){
-							callback(err, result[0][key], fields);
-						}
-					});				
+					var query = "SELECT "+fields+" FROM "+tableName+qcond;
+					
+          pool.getConnection(function(err, connection) {
+            connection.query(query, function(err, result, fields) {
+              connection.release();
+						  for (var key in result[0]) break;
+						  if(callback) {
+						  	callback(err, result[0][key], fields);
+						  }
+            });
+          });
 					break;
 			}
 		},
@@ -132,55 +169,78 @@ var createConnection  = function (options) {
 			if(this.tableName) var tableName = this.tableName;
 			else var tableName = this.attributes.tableName;
 			if(where) {
-				var id = null;
-				if(this.has('id')) {
-					id = this.get('id');
-					delete this.attributes.id;
-				}
-				var q = "UPDATE "+tableName+" SET "+ connection.escape(this.attributes)+" WHERE "+where;
-				if(id) {
-					this.set('id', id);
-				}
-				var check = "SELECT * FROM "+tableName+" WHERE "+where;
-				connection.query(check, function(err, result, fields) {
-					if(result[0]){
-						connection.query(q, function(err, result) {
-							if(callback){
-								callback(err, result, connection);
-							}
-						});	
-					} else {
-						err="ERROR: Record not found";
-						callback(err, result, connection);
-					}
-				});	
+				var cself = this;
+			
+        pool.getConnection(function(err, connection) {
+
+				  var id = null;
+				  if(cself.has('id')) {
+				  	id = cself.get('id');
+				  	delete cself.attributes.id;
+				  }
+
+				  var q = "UPDATE "+tableName+" SET "+ connection.escape(cself.attributes)+" WHERE "+where;
+				  if(id) {
+				  	cself.set('id', id);
+				  }
+				  var check = "SELECT * FROM "+tableName+" WHERE "+where;
+
+          connection.query(check, function(err, result, fields) {
+					  if(result[0]){
+					  	connection.query(q, function(err, result) {
+					  		connection.release();
+					  		if(callback){
+					  			callback(err, result);
+					  		}
+					  	});	
+					  } else {
+					  	connection.release();
+					  	err="ERROR: Record not found";
+					  	callback(err, result);
+					  }
+          });
+        });
+				
 				
 			} else {
 				if(this.has('id')) {
-					var id = this.get('id');
-					delete this.attributes.id;
-					var q = "UPDATE "+tableName+" SET "+ connection.escape(this.attributes)+" WHERE id="+connection.escape(id);
-					this.set('id', id);
-					var check = "SELECT * FROM "+tableName+" WHERE id="+connection.escape(id);
-					connection.query(check, function(err, result, fields) {
-						if(result[0]){
-							connection.query(q, function(err, result) {
-								if(callback){
-									callback(err, result, connection);
-								}
-							});	
-						} else {
-							err="ERROR: Record not found";
-							callback(err, result, connection);
-						}
-					});			
+				  var cself = this;
+				
+          pool.getConnection(function(err, connection) {
+
+					  var id = cself.get('id');
+					  delete cself.attributes.id;
+					  var q = "UPDATE "+tableName+" SET "+ connection.escape(cself.attributes)+" WHERE id="+connection.escape(id);
+					  cself.set('id', id);
+					  var check = "SELECT * FROM "+tableName+" WHERE id="+connection.escape(id);
+
+            connection.query(check, function(err, result, fields) {
+				  	  if(result[0]){
+				  	  	connection.query(q, function(err, result) {
+				  	  		connection.release();
+				  	  		if(callback){
+				  	  			callback(err, result);
+				  	  		}
+				  	  	});	
+				  	  } else {
+				  	  	connection.release();
+				  	  	err="ERROR: Record not found";
+				  	  	callback(err, result);
+				  	  }
+            });
+          });
+							
 				} else {
 					// Create new record
-					var q = "INSERT INTO "+tableName+" SET "+ connection.escape(this.attributes);
-					connection.query(q, function(err, result) {
-						if(callback){
-							callback(err, result, connection);
-						}
+					var cself = this
+					pool.getConnection(function(err, connection) {
+					  var q = "INSERT INTO "+tableName+" SET "+ connection.escape(cself.attributes);
+					  connection.query(q, function(err, result) {
+					  	connection.release();
+					  	if(callback){
+					  		callback(err, result);
+					  	}
+					  });
 					});
 				}
 			}
@@ -196,47 +256,52 @@ var createConnection  = function (options) {
 			if(where) {
 				var q = "DELETE FROM "+tableName+" WHERE "+where;
 				var check = "SELECT * FROM "+tableName+" WHERE "+where;
-				connection.query(check, function(err, result, fields) {
-					if(result[0]){
-						connection.query(q, function(err, result) {
-							if(callback){
-								callback(err, result, connection);
-							}
-						});	
-					} else {
-						err="ERROR: Record not found";
-						callback(err, result, connection);
-					}
+				pool.getConnection(function(err, connection) {
+				  connection.query(check, function(err, result, fields) {
+				  	if(result[0]){
+				  		connection.query(q, function(err, result) {
+				  			if(callback){
+				  				connection.release();
+				  				callback(err, result);
+				  			}
+				  		});	
+				  	} else {
+				  		connection.release();
+				  		err="ERROR: Record not found";
+				  		callback(err, result);
+				  	}
+				  });
 				});					
 			} else {
 				if(this.has('id')) {
-					var q = "DELETE FROM "+tableName+" WHERE id="+connection.escape(this.attributes.id);
-					var check = "SELECT * FROM "+tableName+" WHERE id="+connection.escape(this.attributes.id);
-					this.clear();
-					connection.query(check, function(err, result, fields) {
-						if(result[0]){
-							connection.query(q, function(err, result) {
-								if(callback){
-									callback(err, result, connection);
-								}
-							});	
-						} else {
-							err="ERROR: Record not found";
-							callback(err, result, connection);
-						}
+          var cself = this;
+					pool.getConnection(function(err, connection) {
+					  var q = "DELETE FROM "+tableName+" WHERE id="+connection.escape(cself.attributes.id);
+					  var check = "SELECT * FROM "+tableName+" WHERE id="+connection.escape(cself.attributes.id);
+					  cself.clear();
+					  connection.query(check, function(err, result, fields) {
+					  	if(result[0]){
+					  		connection.query(q, function(err, result) {
+					  			if(callback){
+					  				connection.release();
+					  				callback(err, result);
+					  			}
+					  		});	
+					  	} else {
+					  		connection.release();
+					  		err="ERROR: Record not found";
+					  		callback(err, result);
+					  	}
+					  });
 					});			
 				} else {
 					err="ERROR: Model has no specified ID, delete aborted"; 
 					if(callback){
-						callback(err, result, connection);
+						callback(err, result);
 					}
 				}
 			}	
 		},
-		killConnection: function(cb) {
-			cb = cb || function(){};
-			connection.end(cb)
-		}
 	});
 	return SQLModel;
 }
