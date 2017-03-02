@@ -37,10 +37,18 @@ var createConnection  = function (options) {
 			} 
 			var q = "SELECT * FROM "+tableName+" WHERE id="+id;
 			connection.query(q, root, function(err, result, fields) {
-				root.setSQL(result[0]);
-				if(callback){
-					callback(err, result[0], fields);
+				if(err)
+					return callback(err);
+				
+				if(result.length > 0){
+					root.setSQL(result[0]);
+					if(callback){
+						callback(err, result[0], fields);
+					}
+				}else{
+					callback(null, []);
 				}
+				
 			});		
 		},	
 		// Function with set of methods to return records from database
@@ -88,6 +96,9 @@ var createConnection  = function (options) {
 				case 'all': 
 					var q = "SELECT "+fields+" FROM "+tableName+qcond;
 					connection.query(q, function(err, result, fields) {
+						if(err)
+							return callback(err);
+						
 						if(callback){
 							callback(err, result, fields);
 						}
@@ -97,6 +108,9 @@ var createConnection  = function (options) {
 				case 'count':
 					var q = "SELECT COUNT(*) FROM "+tableName+qcond;
 					connection.query(q, function(err, result, fields) {
+						if(err)
+							return callback(err);
+
 						if(callback){
 							callback(err, result[0]['COUNT(*)'], fields);
 						}
@@ -106,6 +120,9 @@ var createConnection  = function (options) {
 				case 'first':
 					var q = "SELECT "+fields+" FROM "+tableName+qcond;
 					connection.query(q, function(err, result, fields) {
+						if(err)
+							return callback(err);
+
 						if(callback){
 							callback(err, result[0], fields);
 						}
@@ -115,6 +132,9 @@ var createConnection  = function (options) {
 				case 'field':
 					var q = "SELECT "+fields+" FROM "+tableName+qcond;
 					connection.query(q, function(err, result, fields) {
+						if(err)
+							return callback(err);
+
 						for (var key in result[0]) break;
 						if(callback){
 							callback(err, result[0][key], fields);
@@ -143,6 +163,9 @@ var createConnection  = function (options) {
 				}
 				var check = "SELECT * FROM "+tableName+" WHERE "+where;
 				connection.query(check, function(err, result, fields) {
+					if(err)
+						return callback(err);
+
 					if(result[0]){
 						connection.query(q, function(err, result) {
 							if(callback){
@@ -163,6 +186,9 @@ var createConnection  = function (options) {
 					this.set('id', id);
 					var check = "SELECT * FROM "+tableName+" WHERE id="+connection.escape(id);
 					connection.query(check, function(err, result, fields) {
+						if(err)
+							return callback(err);
+
 						if(result[0]){
 							connection.query(q, function(err, result) {
 								if(callback){
@@ -178,6 +204,9 @@ var createConnection  = function (options) {
 					// Create new record
 					var q = "INSERT INTO "+tableName+" SET "+ connection.escape(this.attributes);
 					connection.query(q, function(err, result) {
+						if(err)
+							return callback(err);
+
 						if(callback){
 							callback(err, result, connection);
 						}
@@ -197,6 +226,8 @@ var createConnection  = function (options) {
 				var q = "DELETE FROM "+tableName+" WHERE "+where;
 				var check = "SELECT * FROM "+tableName+" WHERE "+where;
 				connection.query(check, function(err, result, fields) {
+					if(err)
+						return callback(err);
 					if(result[0]){
 						connection.query(q, function(err, result) {
 							if(callback){
@@ -214,6 +245,8 @@ var createConnection  = function (options) {
 					var check = "SELECT * FROM "+tableName+" WHERE id="+connection.escape(this.attributes.id);
 					this.clear();
 					connection.query(check, function(err, result, fields) {
+						if(err)
+							return callback(err);
 						if(result[0]){
 							connection.query(q, function(err, result) {
 								if(callback){
