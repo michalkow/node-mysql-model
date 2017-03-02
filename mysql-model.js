@@ -314,7 +314,8 @@ var createModel  = function (options) {
      * Function for kill the connection
      * @private
      */
-    function _killConnection(cb) {
+    function _killConnection(callback) {
+        var cb = callback || function () {};
         if(connection.end){
             connection.end(cb)
         }else{
