@@ -1,9 +1,10 @@
-node-mysql-model
-========
+# node-mysql-model
+
+[![Build Status](https://travis-ci.org/michalkow/node-mysql-model.svg?branch=master)](https://travis-ci.org/michalkow/node-mysql-model)
+
 A [backbone](http://backbonejs.org) based model for communicating with a MySQL database using [felixge/node-mysql](https://github.com/felixge/node-mysql).
 
-Install
---------
+## Install
 
 Install from npm package:
 
@@ -17,8 +18,7 @@ Or install from git:
 npm install git://github.com/michalkow/node-mysql-model.git
 ```
 
-Usage
---------
+## Usage
 
 Add the mysql-model module to your application :
 
@@ -49,11 +49,11 @@ movie = new MyAppModel({tableName: "movies"});
 	
 To see complete list of options for creating a connection with the database visit [felixge/node-mysql](https://github.com/felixge/node-mysql#connection-options) readme. 	
 
-API
---------
-**Model Settable Options**
+## API
 
->tableName
+### Model Settable Options
+
+#### tableName
 
 Name of a MySQL table the model will refer to:
 
@@ -63,9 +63,9 @@ var Movie = MyAppModel.extend({
 });
 ```	
 
-**Methods**
+### Methods
 
-> find
+#### find
 
 
 *Retrieves records from database*
@@ -94,7 +94,7 @@ movie.find('all', {where: "year > 2001"}, function(err, rows, fields) {
 });
 ```		
 
-> save
+#### save
 
 *Saves your model to database*
 
@@ -127,7 +127,7 @@ movie.set('id', 4);
 movie.save();
 ```		
 
-> remove
+#### remove
 
 *Deletes your model from database and unsets it*
 
@@ -154,7 +154,7 @@ movie.remove();
 movie.remove('year < 1980');
 ```	
 
-> read
+#### read
 
 *Retrieves record from database and set it to current model*
 
@@ -181,7 +181,7 @@ movie.read();
 movie.read(6);
 ```	
 
-> query
+#### query
 
 *Runs custom query*
 
@@ -204,7 +204,7 @@ movie.query("SELECT name FROM movies WHERE director = 'James Cameron' ORDER BY y
 });
 ```	
 
-> setSQL
+#### setSQL
 
 *Method to replace 'set', when setting results passed back by node-mysql*
 
@@ -225,9 +225,9 @@ movie.find('first', {where: "id=12"}, function(err, row) {
 });
 ```	
 
-**'find' methods**
+### 'find' methods
 
-> 'all'
+#### 'all'
 
 *Returns all the records matching conditions*
 
@@ -245,7 +245,7 @@ movie.find('all', {where: "language = 'German'", limit: [0, 30]}, function(err, 
 });
 ```	
 
-> 'count'
+#### 'count'
 
 *Returns number of records matching conditions*
 
@@ -261,7 +261,7 @@ movie.find('count', {where: "year = 2012"}, function(err, result) {
 });
 ```	
 
-> 'first'
+#### 'first'
 
 *Returns first the records matching conditions*
 
@@ -277,7 +277,7 @@ movie.find('first', {where: "id = 3"}, function(err, row) {
 });
 ```	
  
-> 'field'
+#### 'field'
 
 *Returns field of the first record matching conditions*
 
@@ -293,9 +293,9 @@ movie.find('field', {fields: ['name'], where: "id = 3"}, function(err, field) {
 });
 ```	
 
-**'find' conditions**
+### 'find' conditions
 
-> fields
+#### fields
 
 *Fields to select from the table*
 
@@ -313,7 +313,7 @@ movie.find('all', {fields: "name"});
 // SELECT name FROM movies
 ```	
 
-> where
+#### where
 
 *Operators for MySQL WHERE clause.*
 
@@ -328,7 +328,7 @@ movie.find('all', {where: "year > 1987"});
 // SELECT * FROM movies WHERE year > 1987
 ```	
 
-> group
+#### group
 
 *Operators for MySQL GROUP BY clause.*
 
@@ -346,7 +346,7 @@ movie.find('all', {group: "name"});
 // SELECT * FROM movies GROUP BY name
 ```	
 
-> groupDESC
+#### groupDESC
 
 *If true, sets descending order for GROUP BY*
 
@@ -361,7 +361,7 @@ movie.find('all', {group: ['year', 'name'], groupDESC:true});
 // SELECT * FROM movies GROUP BY year, name DESC
 ```	
 
-> having
+#### having
 
 *Operators for MySQL HAVING clause.*
 
@@ -376,7 +376,7 @@ movie.find('all', {fields: ['name', 'COUNT(name)'], group: "name", having: "COUN
 // SELECT name, COUNT(name) FROM movies GROUP BY name HAVING COUNT(name) = 1
 ```
 
-> order
+#### order
 
 *Operators for MySQL ORDER BY clause.*
 
@@ -394,7 +394,7 @@ movie.find('all', {group: "name"});
 // SELECT * FROM movies ORDER BY name
 ```	
 
-> orderDESC
+#### orderDESC
 
 *If true, sets descending order for ORDER BY*
 
@@ -409,7 +409,7 @@ movie.find('all', {group: ['year', 'name'], orderDESC:true});
 // SELECT * FROM movies ORDER BY year, name DESC
 ```	
 
-> limit
+#### limit
 
 *Operators for MySQL LIMIT clause.*
 
@@ -427,15 +427,15 @@ movie.find('all', {limit: "10, 40"});
 // SELECT * FROM movies LIMIT 10, 40
 ```	
 
-Todo
--------
+## Todo
+
 - validation
 - relations
 				
-License
--------
+## License
+
 node-mysql-model is released under [MIT license](http://opensource.org/licenses/mit-license.php).
 
-Credits
--------
+## Credits
+
 node-mysql-model was created by [Michał Kowalkowski](https://github.com/michalkow). You can contact me at [kowalkowski.michal@gmail.com](mailto:kowalkowski.michal@gmail.com)
