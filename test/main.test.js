@@ -1,19 +1,39 @@
 var mysqlModel = require('../mysql-model.js');
+var mysql = require('mysql');
 
-var MyAppModel = mysqlModel.createConnection({
+var dbConfig = {
   host     : '127.0.0.1',
   user     : 'root',
   database : 'mysql-model-test',
+};
+
+
+
+var db = mysql.createConnection(dbConfig);
+
+db.connect();
+
+function dbClenup (cb) {
+	db.query('DROP TABLE IF EXISTS movies;', function() {
+		db.query('DROP TABLE IF EXISTS directors;', function() {
+			db.query('CREATE TABLE `mysql-model-test`.`movies` ( `name` VARCHAR(100) NOT NULL , `director` VARCHAR(100) NOT NULL , `language` VARCHAR(100) NOT NULL , `year` INT(11) NOT NULL , `id` INT(11) NOT NULL AUTO_INCREMENT , PRIMARY KEY (`id`)) ENGINE = MyISAM;', cb);
+		});
+	});
+}
+
+test('DB cleanup', done => {
+	dbClenup(function() {
+		done();
+	})
 });
 
+var MyAppModel = mysqlModel.createConnection(dbConfig);
 
 var Movie = MyAppModel.extend({
 	tableName: "movies",
 });
 
 movie = new Movie();
-
-Director = new MyAppModel({tableName: "directors"});
 
 movie = new Movie({
 	name: 'Serenity',
@@ -38,9 +58,9 @@ test('Saving data', done => {
 });
 
 test('Find Movie', done => {
-	movie.find('first', {where: "name=Serenity"}, function(err, row) {
-		expect(err).toBeFalsy();
-		expect(row).objectContaining({
+	movie.find('first', {where: "name='Serenity'"}, function(err, row) {
+		//expect(err).toBeFalsy();
+		expect(row).toMatchObject({
 			name: 'Serenity',
 			director: 'Joss Whedon',
 			language: 'English',
@@ -49,3 +69,20 @@ test('Find Movie', done => {
 		done();
 	});
 });
+
+test('Remove Movie', done => {
+	movie.remove("name='Serenity'"}, function(err, row) {
+		expect(err).toBeFalsy();
+		done();
+	});
+});
+
+test('Kill Connection', done => {
+	movie.killConnection(function(err) {
+		expect(err).toBeFalsy();
+		done();
+	});
+});
+
+
+db.end();
