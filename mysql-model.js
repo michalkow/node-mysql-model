@@ -107,7 +107,9 @@ var createConnection  = function (options) {
 					var q = "SELECT "+fields+" FROM "+tableName+qcond;
 					connection.query(q, function(err, result, fields) {
 						if(callback){
-							callback(err, result[0], fields);
+							if(result && result.length) {
+								callback(err, result[0], fields);
+							} else callback(err, result, fields);
 						}
 					});				
 					break;

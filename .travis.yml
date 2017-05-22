@@ -1,0 +1,7 @@
+language: node_js
+node_js:
+  - 4.3.1
+services:
+  - mysql
+before_install:
+  - mysql -e 'CREATE DATABASE mysql-model-test;'
