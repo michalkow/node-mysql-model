@@ -5,7 +5,7 @@
   "description": "A backbone based model for communicating with a MySQL database using felixge/node-mysql.",
   "main": "./mysql-model.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest -i"
   },
   "repository": {
     "type": "git",

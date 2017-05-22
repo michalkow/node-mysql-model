@@ -4,4 +4,4 @@ node_js:
 services:
   - mysql
 before_install:
-  - mysql -e 'CREATE DATABASE mysqlModelTest;'
+  - mysql -e 'CREATE DATABASE mysqlmodeltest;'
