@@ -29,23 +29,19 @@ test('DB cleanup', done => {
 
 var MyAppModel = mysqlModel.createConnection(dbConfig);
 
-var Movie = MyAppModel.extend({
-	tableName: "movies",
-});
 
-movie = new Movie();
-
-movie = new Movie({
-	name: 'Serenity',
-	director: 'Joss Whedon',
-	language: 'English',
-	year: 2005
-});
-// Will create new record
-movie.save();
 
 test('Made connnection', () => {
   expect(MyAppModel).toBeTruthy();
+});
+
+
+test('Made Model', () => {
+	var Movie = MyAppModel.extend({
+		tableName: "movies",
+	});
+	var movie = new Movie();
+  expect(movie).toBeTruthy();
 });
 
 test('Saving data', done => {
