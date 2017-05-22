@@ -4,7 +4,7 @@ var mysql = require('mysql');
 var dbConfig = {
   host     : '127.0.0.1',
   user     : 'root',
-  database : 'mysql-model-test',
+  database : 'mysqlModelTest',
 };
 
 
