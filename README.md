@@ -6,7 +6,13 @@ A [backbone](http://backbonejs.org) based model for communicating with a MySQL d
 
 ## Install
 
-Install from git:
+Install from npm package:
+
+```bash
+npm install mysql-model
+```
+
+Or install from git:
 
 ```bash
 npm install git://github.com/michalkow/node-mysql-model.git
