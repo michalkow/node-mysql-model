@@ -1,245 +1,293 @@
-var _ = require('underscore')._;
 var Backbone = require('backbone');
-var mysql = require('mysql');
+var Promise = require("bluebird");
+var _ = require("underscore");
 
-var createConnection  = function (options) {
-	// Uses node-mysql to establish connection with database
-	var connection = mysql.createConnection(options);
-
-	// Main model
-	var SQLModel = Backbone.Model.extend({
-		// Function instead of set, removes functions passed back in results by node-mysql
-		setSQL: function(sql) {
-			for (var key in sql) {
-				if (typeof(sql[key]) != "function") {
-					this.set(key, sql[key]);
-				}
-			};
-		},
-		// Function for creating custom queries
-		query: function(query, callback) {
-			connection.query(query, function(err, result, fields) {
-				if(callback){
-					callback(err, result, fields);
-				}
-			});	
-		},		
-		// Function returning one set of results and setting it to model it was used on
-		read: function(id, callback) {
-			root=this;
-			if(this.tableName) var tableName = this.tableName;
-			else var tableName = this.attributes.tableName;
-			if(!id) {
-				id=this.attributes.id;
-			} else if (typeof(id) == "function") {
-				callback=id;
-				id=this.attributes.id;
-			} 
-			var q = "SELECT * FROM "+tableName+" WHERE id="+id;
-			connection.query(q, root, function(err, result, fields) {
-				root.setSQL(result[0]);
-				if(callback){
-					callback(err, result[0], fields);
+// Main model
+var MysqlModel = Backbone.Model.extend({
+	// Function returning one set of results and setting it to model it was used on
+	fetch: function (id) {
+		var self = this;
+		id = id || self.id || self.attributes[self.idAttribute];
+		return new Promise(function(resolve, reject) {
+			if (!id) reject(new Error('mysql-model: No id passed or set'));
+			if (!self.connection) reject(new Error('mysql-model: No connection'));
+			var q = "SELECT * FROM " + self.tableName + " WHERE " + self.idAttribute + "=" + id;
+			self.connection.query(q, function (err, result, fields) {
+				if (err || !result) reject(err);
+				else {
+					self.set(result[0]);
+					resolve(result[0]);
 				}
 			});		
-		},	
-		// Function with set of methods to return records from database
-		find: function(method, conditions, callback) {
-			if (typeof(method) == "function") {
-				callback=method;
-				method='all';
-				conditions={};
-			} else if (typeof(conditions) == "function") {
-				callback=conditions;
-				conditions={};
+		});
+	},
+	read: function (id) {
+		console.warn('mysql-model: read is deprecated method, use fetch instead.')
+		return this.fetch(id);
+	},
+	// Function saving your model attributes
+	save: function (id) {
+		var self = this;
+		id = id || self.id || self.attributes[self.idAttribute];
+		return new Promise(function (resolve, reject) {
+			if (!self.connection) reject(new Error('mysql-model: No connection'));
+			if (!id) {
+				var query = "INSERT INTO " + self.tableName + " SET " + self.connection.escape(self.attributes);
+				self.connection.query(query, function (err, results, fields) {
+					if (err) reject(err);
+					else if (!results.insertId) reject(new Error('mysql-model: No row inserted.'));
+					else {
+						self.set(self.idAttribute, results.insertId);
+						resolve(results);
+					}
+				})				
+			} else {
+				var query = "UPDATE " + self.tableName + " SET " + self.connection.escape(self.attributes) + " WHERE " + self.idAttribute + "=" + self.connection.escape(id);
+				self.connection.query(query, function (err, results, fields) {
+					if (err) reject(err);
+					else if (!results.changedRows) reject(new Error('mysql-model: No rows changed.'));
+					else resolve(results);
+				})
 			}
-			if(this.tableName) var tableName = this.tableName;
-			else var tableName = this.attributes.tableName;
-			// building query conditions
-			var qcond='';
-			var fields='*';
-			if(conditions['fields']) {
-				fields=conditions['fields'];
-			}		
-			if(conditions['where']) {
-				qcond+=" WHERE "+conditions['where'];
-			}		
-			if(conditions['group']) {
-				qcond+=" GROUP BY "+conditions['group'];
-				if(conditions['groupDESC']) {
-				qcond+=" DESC";
+		});
+	},	
+	// Function for removing records
+	destroy: function (id) {
+		var self = this;
+		id = id || self.id || self.attributes[self.idAttribute];
+		return new Promise(function (resolve, reject) {
+			if (!id) reject(new Error('mysql-model: No id passed or set'));
+			if (!self.connection) reject(new Error('mysql-model: No connection'));
+			var query = "DELETE FROM " + self.tableName + " WHERE " +self.idAttribute+ "=" + self.connection.escape(id);
+			self.connection.query(query, function (err, results) {
+				if (err) reject(err);
+				else if (!results.affectedRows) reject(new Error('mysql-model: No rows removed.'));
+				else {
+					self.clear();
+					resolve(results);
 				}
-			}		
-			if(conditions['having']) {
-				qcond+=" HAVING "+conditions['having'];
-			}		
-			if(conditions['order']) {
-				qcond+=" ORDER BY "+conditions['order'];
-				if(conditions['orderDESC']) {
-					qcond+=" DESC";
-				}
-			}		
-			if(conditions['limit']) {
-				qcond+=" LIMIT "+conditions['limit'];
-			}		
+			});
+		});
+	},
+	remove: function(id) {
+		console.warn('mysql-model: remove is deprecated method, use destroy instead.');
+		return this.destroy(id);
+	},
+	// Function for creating custom queries
+	query: function (query) {
+		console.warn('mysql-model: query is deprecated method.');
+		var self = this;
+		return new Promise(function (resolve, reject) {
+			if (!self.connection) reject(new Error('mysql-model: No connection'));
+			self.connection.query(query, function (err, results, fields) {
+				if (err || !results) reject(err);
+				else resolve(results);
+			});
+		});
+	}
+});
 
-			switch (method) {
-				// default method
-				case 'all': 
-					var q = "SELECT "+fields+" FROM "+tableName+qcond;
-					connection.query(q, function(err, result, fields) {
-						if(callback){
-							callback(err, result, fields);
-						}
-					});	
-					break;
-				// method returning value of COUNT(*)
-				case 'count':
-					var q = "SELECT COUNT(*) FROM "+tableName+qcond;
-					connection.query(q, function(err, result, fields) {
-						if(callback){
-							callback(err, result[0]['COUNT(*)'], fields);
-						}
-					});				
-					break;		
-				// method returning only first result (to use when you expect only one result)				
-				case 'first':
-					var q = "SELECT "+fields+" FROM "+tableName+qcond;
-					connection.query(q, function(err, result, fields) {
-						if(callback){
-							if(result && result.length) {
-								callback(err, result[0], fields);
-							} else callback(err, result, fields);
-						}
-					});				
-					break;
-				// method returning only value of one field (if specified in 'fields') form first result 
-				case 'field':
-					var q = "SELECT "+fields+" FROM "+tableName+qcond;
-					connection.query(q, function(err, result, fields) {
-						for (var key in result[0]) break;
-						if(callback){
-							callback(err, result[0][key], fields);
-						}
-					});				
-					break;
-			}
-		},
-		// Function saving your model attributes
-		save: function(where, callback) {
-			if (typeof(where) == "function") {
-				callback=where;
-				where=null;
-			}
-			if(this.tableName) var tableName = this.tableName;
-			else var tableName = this.attributes.tableName;
-			if(where) {
-				var id = null;
-				if(this.has('id')) {
-					id = this.get('id');
-					delete this.attributes.id;
+
+var MysqlCollection = Backbone.Collection.extend({
+	model: MysqlModel,
+	// Sync current models
+	sync: function () {
+		var self = this;
+		var tableName = self.model.prototype.tableName || self.tableName;
+		var connection = self.model.prototype.connection || self.connection;
+		var idAttribute = self.model.prototype.idAttribute || 'id';
+		return new Promise(function (resolve, reject) {
+			if (!connection) reject(new Error('mysql-model: No connection'));
+			var ids = _.map(self.models, function (model) {
+				return model.id;
+			});
+			var query = "SELECT from " + tableName + " WHERE " + idAttribute + " IN (" + self.connection.escape(ids) + ");"
+			connection.query(query, function (err, rows) {
+				if (err || !rows) reject(err);
+				else {
+					self.set(rows);
+					resolve(rows);
 				}
-				var q = "UPDATE "+tableName+" SET "+ connection.escape(this.attributes)+" WHERE "+where;
-				if(id) {
-					this.set('id', id);
+			});
+		});
+	},
+	// Function saving your model attributes
+	create: function (data) {
+		var self = this;
+		var tableName = self.model.prototype.tableName || self.tableName;
+		var connection = self.model.prototype.connection || self.connection;
+		var idAttribute = self.model.prototype.idAttribute || 'id';
+		return new Promise(function (resolve, reject) {
+			if (!connection) reject(new Error('mysql-model: No connection'));
+			var query = "INSERT INTO " + tableName + " SET " + connection.escape(data);
+			connection.query(query, function (err, results, fields) {
+				if (err) reject(err);
+				else if (!results.insertId) reject(new Error('mysql-model: No row inserted.'));
+				else {
+					data[idAttribute] = results.insertId;
+					self.add(data);
+					resolve(data);
 				}
-				var check = "SELECT * FROM "+tableName+" WHERE "+where;
-				connection.query(check, function(err, result, fields) {
-					if(result[0]){
-						connection.query(q, function(err, result) {
-							if(callback){
-								callback(err, result, connection);
-							}
-						});	
-					} else {
-						err="ERROR: Record not found";
-						callback(err, result, connection);
-					}
-				});	
-				
-			} else {
-				if(this.has('id')) {
-					var id = this.get('id');
-					delete this.attributes.id;
-					var q = "UPDATE "+tableName+" SET "+ connection.escape(this.attributes)+" WHERE id="+connection.escape(id);
-					this.set('id', id);
-					var check = "SELECT * FROM "+tableName+" WHERE id="+connection.escape(id);
-					connection.query(check, function(err, result, fields) {
-						if(result[0]){
-							connection.query(q, function(err, result) {
-								if(callback){
-									callback(err, result, connection);
-								}
-							});	
-						} else {
-							err="ERROR: Record not found";
-							callback(err, result, connection);
-						}
-					});			
-				} else {
-					// Create new record
-					var q = "INSERT INTO "+tableName+" SET "+ connection.escape(this.attributes);
-					connection.query(q, function(err, result) {
-						if(callback){
-							callback(err, result, connection);
-						}
-					});
-				}
-			}
-		},
-		// Function for removing records
-		remove: function(where, callback) {
-			if (typeof(where) == "function") {
-				callback=where;
-				where=null;
-			}
-			if(this.tableName) var tableName = this.tableName;
-			else var tableName = this.attributes.tableName;
-			if(where) {
-				var q = "DELETE FROM "+tableName+" WHERE "+where;
-				var check = "SELECT * FROM "+tableName+" WHERE "+where;
-				connection.query(check, function(err, result, fields) {
-					if(result[0]){
-						connection.query(q, function(err, result) {
-							if(callback){
-								callback(err, result, connection);
-							}
-						});	
-					} else {
-						err="ERROR: Record not found";
-						callback(err, result, connection);
-					}
-				});					
-			} else {
-				if(this.has('id')) {
-					var q = "DELETE FROM "+tableName+" WHERE id="+connection.escape(this.attributes.id);
-					var check = "SELECT * FROM "+tableName+" WHERE id="+connection.escape(this.attributes.id);
-					this.clear();
-					connection.query(check, function(err, result, fields) {
-						if(result[0]){
-							connection.query(q, function(err, result) {
-								if(callback){
-									callback(err, result, connection);
-								}
-							});	
-						} else {
-							err="ERROR: Record not found";
-							callback(err, result, connection);
-						}
-					});			
-				} else {
-					err="ERROR: Model has no specified ID, delete aborted"; 
-					if(callback){
-						callback(err, result, connection);
-					}
-				}
-			}	
-		},
-		killConnection: function(cb) {
-			cb = cb || function(){};
-			connection.end(cb)
+			});
+		});
+	},	
+	// Function saving your model attributes
+	save: function (data) {
+		var self = this;
+		var tableName = self.model.prototype.tableName || self.tableName;
+		var connection = self.model.prototype.connection || self.connection;
+		var idAttribute = self.model.prototype.idAttribute || 'id';
+		return new Promise(function (resolve, reject) {
+			if (!connection) reject(new Error('mysql-model: No connection'));
+			if (!self.models[0]) reject(new Error('mysql-model: No models'));
+			var attributes = self.models[0].attributes;
+			var query = "INSERT INTO " + tableName + " (" + _.keys(attributes).join(',')  + ") VALUES ";
+			query += _.map(self.models, function(model) {
+				return '(' + _.map(attributes, function (val, key) { return "'"+model.toJSON()[key]+"'"; }) + ')'
+			}).join(',');
+			query += " ON DUPLICATE KEY UPDATE ";
+			query += _.map(_.reject(_.keys(attributes), function (key) { return key == idAttribute; }), function (key) { return key + '=VALUE(' + key +')'; }).join(',');
+			query += ";";
+			console.warn(query);
+			connection.query(query, function (err, results, fields) {
+				if (err) reject(err);
+				else resolve();
+			});
+		});
+	},	
+	// Function updating your model attributes
+	update: function (values, where) {
+		var self = this;
+		var tableName = self.model.prototype.tableName || self.tableName;
+		var connection = self.model.prototype.connection || self.connection;
+		return new Promise(function (resolve, reject) {
+			if (!connection) reject(new Error('mysql-model: No connection'));
+			var query = "UPDATE " + tableName + " SET " + connection.escape(values) + " WHERE " + where;
+			connection.query(query, function (err, results, fields) {
+				if (err) reject(err);
+				else if (!results.changedRows) reject(new Error('mysql-model: No rows changed.'));
+				else self.sync().then(function (params) {
+					resolve();
+				}).catch(function (err) {
+					reject(err);
+				});
+			});
+		});
+	},	
+	// Function destroy your model attributes
+	destroy: function (models) {
+		var self = this;
+		var tableName = self.model.prototype.tableName || self.tableName;
+		var connection = self.model.prototype.connection || self.connection;
+		var idAttribute = self.model.prototype.idAttribute || 'id';
+		if (typeof models === 'string' || typeof models === 'number') {
+			var model = new self.model();
+			self.remove(models);
+			return model.destroy(models);
+		} else if (self._isModel(models) && models.has('id')) {
+			self.remove(models);
+			return models.destroy();
 		}
-	});
-	return SQLModel;
-}
-exports.createConnection = createConnection;
+		return new Promise(function (resolve, reject) {
+			if (Object.prototype.toString.call(models) == '[object Array]') {
+				var ids = _.map(models, function(model) {
+					return model.id || model;
+				});
+				var query = "DELETE from " + tableName + " WHERE " + idAttribute + " IN (" + self.connection.escape(ids) + ");"
+				connection.query(query, function (err, results) {
+					if (err) reject(err);
+					else if (!results.affectedRows) reject(new Error('mysql-model: No rows removed.'));
+					else {
+						self.remove(ids);
+						resolve(results);
+					}
+				});
+			} else {
+				reject(new Error('mysql-model: Invalid argument, pass models.'));
+			}
+		});
+	},
+	// Count function
+	count: function (conditions) {
+		var self = this;
+		var tableName = self.model.prototype.tableName || self.tableName;
+		var connection = self.model.prototype.connection || self.connection;
+		var parsed = self._parseConditions(conditions);
+		return new Promise(function (resolve, reject) {
+			if (!self.connection) reject(new Error('mysql-model: No connection'));
+			var q = "SELECT COUNT(*) FROM " + tableName + parsed.query;
+			self.connection.query(q, function (err, result, fields) {
+				if (err || !result) reject(err);
+				else resolve(result[0]['COUNT(*)']);
+			});
+		});
+	},
+	// Function with set of methods to return records from database
+	find: function (conditions) {
+		console.warn('mysql-model: find is deprecated method, use fetch instead.')
+		return this.fetch(conditions);
+	},
+	fetch: function (conditions) {
+		var self = this;
+		var tableName = self.model.prototype.tableName || self.tableName;
+		var connection = self.model.prototype.connection || self.connection;
+		var parsed = self._parseConditions(conditions);
+		return new Promise(function (resolve, reject) {
+			if (!self.connection) reject(new Error('mysql-model: No connection'));
+			var q = "SELECT " + parsed.fields + " FROM " + tableName + parsed.query;
+			self.connection.query(q, function (err, result, fields) {
+				if (err || !result) reject(err);
+				else {
+					self.set(result);
+					resolve(result);
+				}
+			});
+		});
+	},
+	// Function for creating custom queries
+	query: function (query) {
+		console.warn('mysql-model: query is deprecated method.');
+		var self = this;
+		return new Promise(function (resolve, reject) {
+			if (!self.connection) reject(new Error('mysql-model: No connection'));
+			self.connection.query(query, function (err, results, fields) {
+				if (err || !results) reject(err);
+				else resolve(results);
+			});
+		});
+	},
+	_parseConditions: function (conditions) {
+		var query = '';
+		var fields = '*';
+		if (conditions) {
+			if (conditions.fields)
+				fields = conditions.fields;
+			if (conditions.where)  
+				query += " WHERE " + conditions.where;
+			if (conditions.group) {
+				query += " GROUP BY " + conditions.group;
+				if (conditions.groupDESC) 
+					query += " DESC";
+			}
+			if (conditions.having) 
+				query += " HAVING " + conditions.having;
+			if (conditions.order) {
+				query += " ORDER BY " + conditions.order;
+				if (conditions.orderDESC) 
+					query += " DESC";
+			}
+			if (conditions.limit) 
+				query += " LIMIT " + conditions.limit;
+		}
+		return {
+			fields: fields,
+			query: query
+		}
+	}
+});
+
+
+module.exports = {
+	Model: MysqlModel,
+	Collection: MysqlCollection
+};
